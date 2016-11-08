@@ -3,4 +3,4 @@ Game launcher for Luma's CT Pack, loosely based on/inspired by the CTGP 1.03 lau
 
 For more info: [http://wiki.tockdom.com/wiki/Luma's_CT_Pack](http://wiki.tockdom.com/wiki/Luma's_CT_Pack)
 
-Thanks to Chadderz121 for some code from Brainslug.
+Thanks to megazig for some code from Reggie Dumper.
