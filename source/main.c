@@ -2,6 +2,13 @@
 #include <stdlib.h>
 #include <gccore.h>
 #include <wiiuse/wpad.h>
+#include <ogc/system.h>
+#include <malloc.h>
+#include <ogc/consol.h>
+#include <ogc/lwp.h>
+#include <ogc/video.h>
+
+#include "core.h"
 
 static void *xfb = NULL;
 static GXRModeObj *rmode = NULL;
@@ -24,6 +31,8 @@ int main(int argc, char **argv) {
 	if(rmode->viTVMode&VI_NON_INTERLACE) VIDEO_WaitVSync();
 	printf("\x1b[2;0H");
 	
+	int ret=core_init();
+	
 	while(1) {
 		WPAD_ScanPads();
 
@@ -34,5 +43,5 @@ int main(int argc, char **argv) {
 		VIDEO_WaitVSync();
 	}
 
-	return 0;
+	return ret;
 }
