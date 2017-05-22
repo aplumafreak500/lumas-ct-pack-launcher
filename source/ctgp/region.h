@@ -1,1 +1,2 @@
-#define region_pool_1 600-605
+int region=605;
+int cd_region=604;
