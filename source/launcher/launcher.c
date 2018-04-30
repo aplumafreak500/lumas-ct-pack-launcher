@@ -11,6 +11,7 @@
 #include "di.h"
 #include "launcher.h"
 #include "../version.h"
+#include "../patch/dwc.h"
 
 #define HOME_EXIT() { \
 	WPAD_ScanPads(); \
@@ -23,9 +24,9 @@
 	VIDEO_WaitVSync(); \
 }
 
-static const char* regions[] = {"NTSC-U", "NTSC-J", "PAL", "NTSC-K"};
+static const char regions[][6] = {"NTSC-U", "NTSC-J", "PAL", "NTSC-K"};
 
-u32 game_id;
+char game_id[4];
 
 int gm_region;
 
@@ -37,18 +38,14 @@ bool DiscInserted(void) {
 }
 
 int launch() {
-	u32 gids[3];
+	const char* gids;
+	const char release_gids[4][4] = {"RMCE", "RMCJ", "RMCP", "RMCK"};
+	const char debug_gids[4][4] = {"RMCE", "RSBE", "SOUE", "RZDE"};
 	if (debug_build) {
-		gids[0]=0x524d4345; //RMCE
-		gids[1]=0x52534245; //RSBE
-		gids[2]=0x534f5545; //SOUE
-		gids[3]=0x525a4445; //RZDE
+		gids = *debug_gids;
 	}
 	else {
-		gids[0]=0x524d4345; //RMCE
-		gids[1]=0x524d434a; //RMCJ
-		gids[2]=0x524d4350; //RMCP
-		gids[3]=0x524d434b; //RMCK
+		gids = *release_gids;
 	}
 	printf("Init DI...\n");
 	
@@ -65,11 +62,14 @@ reinsert_disc:
 
 	printf("Checking disc...\n");
 	
-	game_id=check_disc();
+	char game_id=(char) check_disc();
+
+	char disc_error[4]="\x00\x00\x00\x00";
+	char no_disc[4]="\x00\x00\x00\x01";
 	
 	// int read_try=0;
 		
-	if (game_id==0x0) {
+	if (&game_id==disc_error) {
 		printf("Disc read error!\n\n");
 		/*
 		read_try++;
@@ -79,33 +79,33 @@ reinsert_disc:
 		*/
 		goto reinsert_disc;
 	}
-	else if (game_id==0x1) {
+	else if (&game_id==no_disc) {
 		// We would've printf()'d here but it would result in a dupe message.
 		//  todo: eject the disc
 		goto reinsert_disc;
 	}
-	else if ((game_id!=gids[0] && game_id!=gids[1] && game_id!=gids[2] && game_id !=gids[3]) && !debug_build) {
+	else if ((&game_id!=&gids[REGION_AMERICA] && &game_id!=&gids[REGION_JAPAN] && &game_id!=&gids[REGION_EUROPE] && &game_id !=&gids[REGION_KOREA]) && !debug_build) {
 		printf("Excuse me, princess! This isn't Mario Kart Wii!\n\n");
 		//  todo: eject the disc
 		goto reinsert_disc;
 	}
-	else if (game_id==gids[3]) {
+	else if (&game_id==&gids[REGION_KOREA]) {
 		printf("Korean support is not implemented!\n\n");
 		//  todo: eject the disc
 		goto reinsert_disc;
 	}
 	else {
-		if (game_id==gids[0]) {
-			gm_region=0;
+		if (&game_id==&gids[REGION_AMERICA]) {
+			gm_region=REGION_AMERICA;
 		}
-		else if(game_id==gids[1]) {
-			gm_region=1;
+		else if(&game_id==&gids[REGION_JAPAN]) {
+			gm_region=REGION_JAPAN;
 		}
-		else if(game_id==gids[2]) {
-			gm_region=2;
+		else if(&game_id==&gids[REGION_EUROPE]) {
+			gm_region=REGION_EUROPE;
 		}
-		else if(game_id==gids[3]) {
-			gm_region=3;
+		else if(&game_id==&gids[REGION_KOREA]) {
+			gm_region=REGION_KOREA;
 		}
 		else {
 			return -1;
