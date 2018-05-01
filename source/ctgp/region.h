@@ -1,4 +1,2 @@
-#include <ogc/system.h>
-
-static int region=605;
-static int cd_region=604;
+static const s16 region;
+static const s16 cd_region;

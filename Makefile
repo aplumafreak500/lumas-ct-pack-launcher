@@ -21,8 +21,8 @@ BIN    		:= bin
 SOURCES		:=	source source/ctgp source/files source/gameregion source/launcher source/network source/patch source/ui source/updater
 DATA		:=	data  
 INCLUDES	:= source/inc 
-LIST   := $(BIN)/boot.list
-MAP    := $(BIN)/boot.map
+LIST   := boot.list
+MAP    := boot.map
 
 #---------------------------------------------------------------------------------
 # options for code generation

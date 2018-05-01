@@ -8,9 +8,7 @@ Returns the game ID; 1 if there's no disc inserted or 0 for read errors.
 */
 
 u32 check_disc() {
-	bool cover;
-	WDVD_Reset();
-	if (!WDVD_VerifyCover(&cover)) {
+	if (DiscInserted()) {
 		WDVD_LowReadDiskId();
 		u32 *gid = (u32*)0x80000000;
 		return *gid;
@@ -18,4 +16,11 @@ u32 check_disc() {
 	else {
 		return 1;
 	}
+}
+
+bool DiscInserted(void) {
+	bool cover;
+	if (!WDVD_VerifyCover(&cover))
+		return cover;
+	return false;
 }

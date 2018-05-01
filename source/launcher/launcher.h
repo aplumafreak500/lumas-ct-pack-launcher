@@ -8,5 +8,4 @@
 static const char regions[][6];
 char game_id[4];
 int gm_region;
-bool DiscInserted(void);
 int launch();

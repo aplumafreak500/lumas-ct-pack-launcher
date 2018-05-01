@@ -11,7 +11,6 @@
 #include "di.h"
 #include "launcher.h"
 #include "../version.h"
-#include "../patch/dwc.h"
 
 #define HOME_EXIT() { \
 	WPAD_ScanPads(); \
@@ -30,26 +29,18 @@ char game_id[4];
 
 int gm_region;
 
-bool DiscInserted(void) {
-	bool cover;
-	if (!WDVD_VerifyCover(&cover))
-		return cover;
-	return false;
-}
-
 int launch() {
-	const char* gids;
-	const char release_gids[4][4] = {"RMCE", "RMCJ", "RMCP", "RMCK"};
-	const char debug_gids[4][4] = {"RMCE", "RSBE", "SOUE", "RZDE"};
+	static const char* gids;
+	static const char debug_gids[4][4] = {"RMCE", "RMCJ", "RMCP", "RMCK"};
+	static const char release_gids[4][4] = {"RMCE", "RSBE", "SOUE", "RZDE"};
 	if (debug_build) {
 		gids = *debug_gids;
 	}
 	else {
 		gids = *release_gids;
 	}
+
 	printf("Init DI...\n");
-	
-reinsert_disc:
 	
 	WDVD_Init();
 
@@ -61,38 +52,29 @@ reinsert_disc:
 	}
 
 	printf("Checking disc...\n");
+
+	WDVD_Reset();
 	
 	char game_id=(char) check_disc();
 
-	char disc_error[4]="\x00\x00\x00\x00";
-	char no_disc[4]="\x00\x00\x00\x01";
-	
-	// int read_try=0;
+	static const char disc_error[4]="\x00\x00\x00\x00";
+	static const char no_disc[4]="\x00\x00\x00\x01";
 		
 	if (&game_id==disc_error) {
 		printf("Disc read error!\n\n");
-		/*
-		read_try++;
-		if (read_try==3) {
-			//  todo: eject the disc
-		}
-		*/
-		goto reinsert_disc;
+		return -1;
 	}
 	else if (&game_id==no_disc) {
-		// We would've printf()'d here but it would result in a dupe message.
-		//  todo: eject the disc
-		goto reinsert_disc;
+		printf("No disc is inserted.\n\n");
+		return 1;
 	}
 	else if ((&game_id!=&gids[REGION_AMERICA] && &game_id!=&gids[REGION_JAPAN] && &game_id!=&gids[REGION_EUROPE] && &game_id !=&gids[REGION_KOREA]) && !debug_build) {
 		printf("Excuse me, princess! This isn't Mario Kart Wii!\n\n");
-		//  todo: eject the disc
-		goto reinsert_disc;
+		return 2;
 	}
 	else if (&game_id==&gids[REGION_KOREA]) {
 		printf("Korean support is not implemented!\n\n");
-		//  todo: eject the disc
-		goto reinsert_disc;
+		return 3;
 	}
 	else {
 		if (&game_id==&gids[REGION_AMERICA]) {

@@ -48,10 +48,11 @@ int main(int argc, char **argv) {
 	if (debug_build) printf(" DEBUG BUILD");
 	printf("\n");
 	
-	launch(); // todo: it can return -1
-	
-	// temporary block
-	while (true)
-		HOME_EXIT();
+	u32 launch_status=launch();
+
+	if (launch_status!=0) {
+		printf("Press Home to exit...");
+		while (true) HOME_EXIT();	
+	}
 	return 0;
 }

@@ -1,5 +1,5 @@
-static u16 version=0;
-static u16 subversion=0;
-static u16 revision=0;
-static u16 build=2;
-static bool debug_build=false;
+static const u16 version;
+static const u16 subversion;
+static const u16 revision;
+static const u16 build;
+static const bool debug_build;
