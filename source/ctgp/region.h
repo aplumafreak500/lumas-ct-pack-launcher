@@ -1,2 +1,2 @@
-static const s16 region;
-static const s16 cd_region;
+const s16 region;
+const s16 cd_region;

@@ -23,21 +23,25 @@
 	VIDEO_WaitVSync(); \
 }
 
-static const char regions[][6] = {"NTSC-U", "NTSC-J", "PAL", "NTSC-K"};
-
-char game_id[4];
-
+static const char* regions[4] = {"NTSC-U", "NTSC-J", "PAL", "NTSC-K"};
+static const u32 debug_gids[4] = {0x524d4345, 0x52534245, 0x534f5545, 0x525a4445};
+static const u32 release_gids[4] = {0x524d4345, 0x524d434a, 0x524d4350, 0x524d434b};
+u32 game_id;
 int gm_region;
 
 int launch() {
-	static const char* gids;
-	static const char debug_gids[4][4] = {"RMCE", "RMCJ", "RMCP", "RMCK"};
-	static const char release_gids[4][4] = {"RMCE", "RSBE", "SOUE", "RZDE"};
+	u32 gids[4];
 	if (debug_build) {
-		gids = *debug_gids;
+		gids[0] = debug_gids[0];
+		gids[1] = debug_gids[1];
+		gids[2] = debug_gids[2];
+		gids[3] = debug_gids[3];
 	}
 	else {
-		gids = *release_gids;
+		gids[0] = release_gids[0];
+		gids[1] = release_gids[1];
+		gids[2] = release_gids[2];
+		gids[3] = release_gids[3];
 	}
 
 	printf("Init DI...\n");
@@ -55,38 +59,38 @@ int launch() {
 
 	WDVD_Reset();
 	
-	char game_id=(char) check_disc();
+	game_id=check_disc();
 
-	static const char disc_error[4]="\x00\x00\x00\x00";
-	static const char no_disc[4]="\x00\x00\x00\x01";
+	static const u32 disc_error=0;
+	static const u32 no_disc=1;
 		
-	if (&game_id==disc_error) {
+	if (game_id==disc_error) {
 		printf("Disc read error!\n\n");
 		return -1;
 	}
-	else if (&game_id==no_disc) {
+	else if (game_id==no_disc) {
 		printf("No disc is inserted.\n\n");
 		return 1;
 	}
-	else if ((&game_id!=&gids[REGION_AMERICA] && &game_id!=&gids[REGION_JAPAN] && &game_id!=&gids[REGION_EUROPE] && &game_id !=&gids[REGION_KOREA]) && !debug_build) {
+	else if ((game_id != gids[REGION_AMERICA] && game_id != gids[REGION_JAPAN] && game_id != gids[REGION_EUROPE] && game_id != gids[REGION_KOREA]) && !debug_build) {
 		printf("Excuse me, princess! This isn't Mario Kart Wii!\n\n");
 		return 2;
 	}
-	else if (&game_id==&gids[REGION_KOREA]) {
+	else if (game_id==gids[REGION_KOREA]) {
 		printf("Korean support is not implemented!\n\n");
 		return 3;
 	}
 	else {
-		if (&game_id==&gids[REGION_AMERICA]) {
+		if (game_id==gids[REGION_AMERICA]) {
 			gm_region=REGION_AMERICA;
 		}
-		else if(&game_id==&gids[REGION_JAPAN]) {
+		else if(game_id==gids[REGION_JAPAN]) {
 			gm_region=REGION_JAPAN;
 		}
-		else if(&game_id==&gids[REGION_EUROPE]) {
+		else if(game_id==gids[REGION_EUROPE]) {
 			gm_region=REGION_EUROPE;
 		}
-		else if(&game_id==&gids[REGION_KOREA]) {
+		else if(game_id==gids[REGION_KOREA]) {
 			gm_region=REGION_KOREA;
 		}
 		else {

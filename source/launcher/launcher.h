@@ -5,7 +5,6 @@
 #define REGION_EUROPE 2
 #define REGION_KOREA 3
 
-static const char regions[][6];
-char game_id[4];
+u32 game_id;
 int gm_region;
 int launch();
