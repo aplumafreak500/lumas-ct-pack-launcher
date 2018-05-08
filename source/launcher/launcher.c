@@ -72,7 +72,7 @@ int launch() {
 		printf("No disc is inserted.\n\n");
 		return 1;
 	}
-	else if ((game_id != gids[REGION_AMERICA] && game_id != gids[REGION_JAPAN] && game_id != gids[REGION_EUROPE] && game_id != gids[REGION_KOREA]) && !debug_build) {
+	else if ((game_id != gids[REGION_AMERICA] && game_id != gids[REGION_JAPAN] && game_id != gids[REGION_EUROPE] && game_id != gids[REGION_KOREA])) {
 		printf("Excuse me, princess! This isn't Mario Kart Wii!\n\n");
 		return 2;
 	}

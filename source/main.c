@@ -43,7 +43,7 @@ int main(int argc, char **argv) {
 	if(rmode->viTVMode&VI_NON_INTERLACE) VIDEO_WaitVSync();
 	printf("\x1b[2;0H");
 	
-	printf("Luma's CT Pack\n\nLauncher v%d.%d.%d.%d",version,subversion,revision,build);
+	printf("Luma's CT Pack\nLauncher v%d.%d.%d.%d",version,subversion,revision,build);
 	
 	if (debug_build) printf(" DEBUG BUILD");
 	printf("\n");
