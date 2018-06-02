@@ -50,7 +50,7 @@ LD      := $(PREFIX)gcc
 CC      := $(PREFIX)gcc
 OBJDUMP := $(PREFIX)objdump
 OBJCOPY := $(PREFIX)objcopy
-ELF2DOL ?= elf2dol
+ELF2DOL ?= $(DEVKITPPC)/bin/elf2dol
 
 # -O2: optimise lots
 # -Wl$C--gc-sections: remove unneeded symbols
@@ -165,7 +165,7 @@ endif
 $(TARGET) : $(BUILD)/output.elf | $(BIN)
 	$(LOG)
 	-$Qmkdir -p $(dir $@)
-	$Q$(OBJCOPY) -O binary $(BUILD)/output.elf $(TARGET) 
+	$Q$(ELF2DOL) $(BUILD)/output.elf $(TARGET) 
 	
 $(BIN)/boot.elf : $(BUILD)/output.elf | $(BIN)
 	$(LOG)
