@@ -1,142 +1,234 @@
-#---------------------------------------------------------------------------------
-# Clear the implicit built in rules
-#---------------------------------------------------------------------------------
-.SUFFIXES:
-#---------------------------------------------------------------------------------
+# based on the Brainslug makefile
+
+###############################################################################
+# helper variables
+C := ,
+
+###############################################################################
+# devkitpro settings
 ifeq ($(strip $(DEVKITPPC)),)
-$(error "Please set DEVKITPPC in your environment. export DEVKITPPC=<path to>devkitPPC")
+  $(error "Please set DEVKITPPC in your environment. export DEVKITPPC=<path to>devkitPPC")
+endif
+ifeq ($(strip $(DEVKITPRO)),)
+  $(error "Please set DEVKITPRO in your environment. export DEVKITPRO=<path to>devkitPRO")
 endif
 
-include $(DEVKITPPC)/wii_rules
+ifeq ($(OS),Windows_NT)
+  $(info Compiling from $(OS))
 
-#---------------------------------------------------------------------------------
-# TARGET is the name of the output
-# BUILD is the directory where object files & intermediate files will be placed
-# SOURCES is a list of directories containing source code
-# INCLUDES is a list of directories containing extra header files
-#---------------------------------------------------------------------------------
-TARGET		:=	$(notdir $(CURDIR))
-BUILD		:=	build
-BIN    		:= bin
-SOURCES		:=	source source/ctgp source/files source/gameregion source/launcher source/network source/patch source/ui source/updater
-DATA		:=	data  
-INCLUDES	:= source/inc 
-LIST   := boot.list
-MAP    := boot.map
-
-#---------------------------------------------------------------------------------
-# options for code generation
-#---------------------------------------------------------------------------------
-
-CFLAGS	= -g -O2 -Wall $(MACHDEP) $(INCLUDE)
-CXXFLAGS	=	$(CFLAGS)
-
-LDFLAGS	=	-g $(MACHDEP) -Wl,-Map,$(notdir $@).map
-
-#---------------------------------------------------------------------------------
-# any extra libraries we wish to link with the project
-#---------------------------------------------------------------------------------
-LIBS	:=	-lwiiuse -lbte -logc -lm
-
-#---------------------------------------------------------------------------------
-# list of directories containing libraries, this must be the top level containing
-# include and lib
-#---------------------------------------------------------------------------------
-LIBDIRS	:=
-
-#---------------------------------------------------------------------------------
-# no real need to edit anything past this point unless you need to add additional
-# rules for different file extensions
-#---------------------------------------------------------------------------------
-ifneq ($(BUILD),$(notdir $(CURDIR)))
-#---------------------------------------------------------------------------------
-
-export OUTPUT	:=	$(CURDIR)/$(TARGET)
-
-export VPATH	:=	$(foreach dir,$(SOURCES),$(CURDIR)/$(dir)) \
-					$(foreach dir,$(DATA),$(CURDIR)/$(dir))
-
-export DEPSDIR	:=	$(CURDIR)/$(BUILD)
-
-#---------------------------------------------------------------------------------
-# automatically build a list of object files for our project
-#---------------------------------------------------------------------------------
-CFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
-CPPFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
-sFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
-SFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.S)))
-BINFILES	:=	$(foreach dir,$(DATA),$(notdir $(wildcard $(dir)/*.*)))
-
-#---------------------------------------------------------------------------------
-# use CXX for linking C++ projects, CC for standard C
-#---------------------------------------------------------------------------------
-ifeq ($(strip $(CPPFILES)),)
-	export LD	:=	$(CC)
+  PORTLIBS := $(DEVKITPRO)/portlibs/ppc
+  PATH := $(DEVKITPPC)/bin:$(PORTLIBS)/bin:$(PATH)
+  ifeq ($(DEVKITPRO),$(subst :, ,$(DEVKITPRO)))
+    DEVKITPRO := $(patsubst /$(firstword $(subst /, ,$(DEVKITPRO)))/%,$(firstword $(subst /, ,$(DEVKITPRO))):/%,$(DEVKITPRO))
+    $(info DEVKITPRO corrected to $(DEVKITPRO))
+  else
+    $(info DEVKITPRO is $(DEVKITPRO))
+  endif
+  PORTLIBS := $(DEVKITPRO)/portlibs/ppc
+  ifeq ($(DEVKITPPC),$(subst :, ,$(DEVKITPPC)))
+    DEVKITPPC := $(patsubst /$(firstword $(subst /, ,$(DEVKITPPC)))/%,$(firstword $(subst /, ,$(DEVKITPPC))):/%,$(DEVKITPPC))
+    $(info DEVKITPPC corrected to $(DEVKITPPC))
+  else
+    $(info DEVKITPPC is $(DEVKITPPC))
+  endif
 else
-	export LD	:=	$(CXX)
+  $(info Compiling from Unix)
+
+  PORTLIBS := $(DEVKITPRO)/portlibs/ppc
+  $(info DEVKITPRO is $(DEVKITPRO))
+  $(info DEVKITPPC is $(DEVKITPPC))
 endif
 
-export OFILES_BIN	:=	$(addsuffix .o,$(BINFILES))
-export OFILES_SOURCES := $(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(sFILES:.s=.o) $(SFILES:.S=.o)
-export OFILES := $(OFILES_BIN) $(OFILES_SOURCES)
+###############################################################################
+# Compiler settings
 
-export HFILES := $(addsuffix .h,$(subst .,_,$(BINFILES)))
+# The toolchain to use.
+PREFIX  ?= $(DEVKITPPC)/bin/powerpc-eabi-
+# Tools to use
+AS      := $(PREFIX)as
+LD      := $(PREFIX)gcc
+CC      := $(PREFIX)gcc
+OBJDUMP := $(PREFIX)objdump
+OBJCOPY := $(PREFIX)objcopy
+ELF2DOL ?= elf2dol
 
-#---------------------------------------------------------------------------------
-# build a list of include paths
-#---------------------------------------------------------------------------------
-export INCLUDE	:=	$(foreach dir,$(INCLUDES), -iquote $(CURDIR)/$(dir)) \
-					$(foreach dir,$(LIBDIRS),-I$(dir)/include) \
-					-I$(CURDIR)/$(BUILD) \
-					-I$(LIBOGC_INC)
+# -O2: optimise lots
+# -Wl$C--gc-sections: remove unneeded symbols
+# -mrvl: enable wii/gamecube compilation
+# -mcpu=750: enable processor specific compilation
+# -meabi: enable eabi specific compilation
+# -Wl$C--section-start$C.init=0x80a00000:
+#    start the executable after 0x80a00000 so we don't have to move in order to
+#    load a dol file from a disk.
+# -Wl$C-Map$C: generate a map file
+LDFLAGS  += -O2 -Wl$C--gc-sections \
+            -g -mrvl -mcpu=750 -meabi \
+            -Wl$C--section-start$C.init=0x80a00000 \
+            $(patsubst %,-Wl$C-Map$C%,$(strip $(MAP)))
+# -O2: optimise lots
+# -Wall: generate lots of warnings
+# -x c: compile as C code
+# -std=gnu99: use the C99 standard with GNU extensions
+# -DGEKKO: define the symbol GEKKO (used in some libogc headers)
+# -DHW_RVL: define the symbol HW_RVL (used in some libogc headers)
+# -D__wii__: define the symbol __wii__ (used in some libogc headers)
+# -mrvl: enable wii/gamecube compilation
+# -mcpu=750: enable processor specific compilation
+# -meabi: enable eabi specific compilation
+# -mhard-float: enable hardware floating point instructions
+# -msdata=eabi: use r2 and r13 as small data areas
+# -memb: enable embedded application specific compilation
+# -ffunction-sections: split up functions so linker can garbage collect
+# -fdata-sections: split up data so linker can garbage collect
+CFLAGS   += -O2 -Wall -x c -std=gnu99 \
+            -DGEKKO -DHW_RVL -D__wii__ \
+            -mrvl -mcpu=750 -meabi -mhard-float \
+            -msdata=eabi -memb -ffunction-sections -fdata-sections
 
-#---------------------------------------------------------------------------------
-# build a list of library paths
-#---------------------------------------------------------------------------------
-export LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib) \
-					-L$(LIBOGC_LIB)
+###############################################################################
+# Parameters
 
-export OUTPUT	:=	$(CURDIR)/$(TARGET)
-.PHONY: $(BUILD) clean
+# Used to suppress command echo.
+Q      ?= @
+LOG    ?= @echo $@
+# The intermediate directory for compiled object files.
+BUILD  ?= build
+# The output directory for compiled results.
+BIN    ?= bin
+# The output directory for releases.
+RELEASE?= release
+# The name of the output file to generate.
+TARGET ?= $(BIN)/boot.dol
+# The name of the assembler listing file to generate.
+LIST   ?= $(BIN)/boot.list
+# The name of the map file to generate.
+MAP    ?= $(BIN)/boot.map
 
-#---------------------------------------------------------------------------------
-$(BUILD):
-	@[ -d $@ ] || mkdir -p $@
-	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
+###############################################################################
+# Variable init
 
-#---------------------------------------------------------------------------------
-clean:
-	@echo clean ...
-	@rm -fr $(BUILD) $(OUTPUT).elf $(OUTPUT).dol
+# The names of libraries to use.
+LIBS     := wiiuse bte ogc m mxml fat
+# The source files to compile.
+SRC      :=
+# Phony targets
+PHONY    :=
+# Include directories
+INC_DIRS := . include include/bslug_include source/brainslug
+# Library directories
+LIB_DIRS := $(DEVKITPPC) $(DEVKITPPC)/powerpc-eabi \
+            $(DEVKITPRO)/libogc $(DEVKITPRO)/libogc/lib/wii \
+            $(wildcard $(DEVKITPPC)/lib/gcc/powerpc-eabi/*) \
+            $(PORTLIBS) $(PORTLIBS)/ppc
 
-#---------------------------------------------------------------------------------
-run:
-	wiiload $(TARGET).dol
+###############################################################################
+# Rule to make everything.
+PHONY += all modules
 
+all : modules $(BIN)/boot.elf $(BIN)/boot-stripped.elf $(TARGET) list
 
-#---------------------------------------------------------------------------------
-else
+modules:
+	$Q$(MAKE) -C source/brainslug-modules/modules all
 
-DEPENDS	:=	$(OFILES:.o=.d)
+PHONY += release
+release: $(TARGET)
+	$(LOG)
+	$(addprefix $Qrm -rf ,$(wildcard $(RELEASE)))
+	$Qmkdir $(RELEASE)
+	$Qmkdir $(RELEASE)/apps
+	$Qmkdir $(RELEASE)/apps/lumas-ct-pack-launcher
+	$Qcp -r $(TARGET) $(RELEASE)/apps/lumas-ct-pack-launcher
+#	$Qcp -r meta.xml $(RELEASE)/apps/lumas-ct-pack-launcher
+#	$Qcp -r icon.png $(RELEASE)/apps/lumas-ct-pack-launcher
+#	$Qcp -r pack-info.txt $(RELEASE)/apps/lumas-ct-pack-launcher/readme.txt
 
-#---------------------------------------------------------------------------------
-# main targets
-#---------------------------------------------------------------------------------
-$(OUTPUT).dol: $(OUTPUT).elf
-$(OUTPUT).elf: $(OFILES)
+###############################################################################
+# Recursive rules
 
-$(OFILES_SOURCES) : $(HFILES)
+include source/makefile.mk
 
-#---------------------------------------------------------------------------------
-# This rule links in binary data with the .jpg extension
-#---------------------------------------------------------------------------------
-%.jpg.o	%_jpg.h :	%.jpg
-#---------------------------------------------------------------------------------
-	@echo $(notdir $<)
-	$(bin2o)
+LDFLAGS += $(patsubst %,-l %,$(LIBS)) $(patsubst %,-l %,$(LIBS)) \
+           $(patsubst %,-L %,$(LIB_DIRS)) $(patsubst %,-L %/lib,$(LIB_DIRS))
+CFLAGS  += $(patsubst %,-I %,$(INC_DIRS)) \
+           $(patsubst %,-I %/include,$(LIB_DIRS)) -iquote src
 
--include $(DEPENDS)
-
-#---------------------------------------------------------------------------------
+OBJECTS := $(patsubst %.c,$(BUILD)/%.c.o,$(filter %.c,$(SRC)))
+          
+ifeq ($(words $(filter clean%,$(MAKECMDGOALS))),0)
+  include $(patsubst %.c,$(BUILD)/%.c.d,$(filter %.c,$(SRC)))
 endif
-#---------------------------------------------------------------------------------
+
+###############################################################################
+# Special build rules
+
+# Rule to make the image file.
+$(TARGET) : $(BUILD)/output.elf | $(BIN)
+	$(LOG)
+	-$Qmkdir -p $(dir $@)
+	$Q$(OBJCOPY) -O binary $(BUILD)/output.elf $(TARGET) 
+	
+$(BIN)/boot.elf : $(BUILD)/output.elf | $(BIN)
+	$(LOG)
+	$Qcp $< $@
+	
+$(BIN)/boot-stripped.elf : $(BUILD)/output.elf | $(BIN)
+	$(LOG)
+	$Qcp $< $@
+	$Q$(PREFIX)strip $@
+	$Q$(PREFIX)strip -g $@
+
+# Rule to make the elf file.
+$(BUILD)/output.elf : $(OBJECTS) $(LINKER) | $(BIN) $(BUILD)
+	$(LOG)
+	$Q$(LD) $(OBJECTS) $(LDFLAGS) -o $@ 
+
+# Rule to make intermediate directory
+$(BUILD) : 
+	$Qmkdir $@
+
+# Rule to make output directory
+$(BIN) : 
+	$Qmkdir $@
+
+###############################################################################
+# Standard build rules
+
+$(BUILD)/%.c.o: %.c | $(BUILD)
+	$(LOG)
+	-$Qmkdir -p $(dir $@)
+	$Q$(CC) -c $(CFLAGS) $< -o $@
+$(BUILD)/%.c.d: %.c | $(BUILD)
+	$(LOG)
+	-$Qmkdir -p $(dir $@)
+	$Q$(RM) $(wildcard $@)
+	$Q{ $(CC) -MP -MM -MT $(@:.d=.o) $(CFLAGS) $< > $@ \
+	&& $(RM) $@.tmp; } \
+	|| { $(RM) $@.tmp && false; }
+
+###############################################################################
+# Assembly listing rules
+
+# Rule to make assembly listing.
+PHONY += list
+list  : $(LIST)
+
+# Rule to make the listing file.
+%.list : $(BUILD)/output.elf $(BUILD)
+	$(LOG)
+	-$Qmkdir -p $(dir $@)
+	$Q$(OBJDUMP) -d $(BUILD)/output.elf > $@
+
+###############################################################################
+# Clean rule
+
+# Rule to clean files.
+PHONY += clean
+clean : 
+	$Qrm -rf $(wildcard $(BUILD) $(BIN) $(RELEASE))
+	$Q$(MAKE) -C source/brainslug-modules/modules clean
+
+###############################################################################
+# Phony targets
+.DELETE_ON_ERROR:
+.SECONDARY:
+.PHONY : $(PHONY)
