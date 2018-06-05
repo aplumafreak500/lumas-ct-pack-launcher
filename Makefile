@@ -61,7 +61,7 @@ ELF2DOL ?= $(DEVKITPPC)/bin/elf2dol
 #    start the executable after 0x80a00000 so we don't have to move in order to
 #    load a dol file from a disk.
 # -Wl$C-Map$C: generate a map file
-LDFLAGS  += -O2 -Wl$C--gc-sections \
+LDFLAGS  += -O2 \
             -g -mrvl -mcpu=750 -meabi \
             -Wl$C--section-start$C.init=0x80a00000 \
             $(patsubst %,-Wl$C-Map$C%,$(strip $(MAP)))
@@ -114,7 +114,7 @@ SRC      :=
 # Phony targets
 PHONY    :=
 # Include directories
-INC_DIRS := . include include/bslug_include source/brainslug
+INC_DIRS := . include source source/brainslug
 # Library directories
 LIB_DIRS := $(DEVKITPPC) $(DEVKITPPC)/powerpc-eabi \
             $(DEVKITPRO)/libogc $(DEVKITPRO)/libogc/lib/wii \

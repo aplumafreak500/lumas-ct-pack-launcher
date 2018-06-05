@@ -2,8 +2,8 @@ WD     := $(dir $(lastword $(MAKEFILE_LIST)))
 WD_SRC := $(WD)
 
 SRC += $(WD)main.c
-SRC += $(WD)wdvd.c
 SRC += $(WD)version.c
+SRC += $(WD)error.c
 
 include $(WD_SRC)brainslug/makefile.mk
 include $(WD_SRC)ctgp/makefile.mk
