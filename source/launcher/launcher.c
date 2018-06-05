@@ -116,9 +116,9 @@ int HOME_EXIT() {
 			SYS_ResetSystem(SYS_RETURNTOMENU, 0, 0);
 		}
 		else {
-			return 1;
+			return true;
 		}
 	}
 	VIDEO_WaitVSync();
-	return 0;
+	return false;
 }
