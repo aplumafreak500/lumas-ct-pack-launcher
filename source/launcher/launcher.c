@@ -1,53 +1,57 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <gccore.h>
+#include <string.h>
 #include <wiiuse/wpad.h>
-#include <ogc/system.h>
-#include <malloc.h>
-#include <ogc/consol.h>
-#include <ogc/lwp.h>
-#include <ogc/video.h>
-#include "../wdvd.h"
+
 #include "di.h"
 #include "launcher.h"
-#include "../version.h"
+#include "version.h"
+#include "apploader/apploader.h"
+#include "library/dolphin_os.h"
+#include "threads.h"
+#include "error.h"
 
-#define HOME_EXIT() { \
-	WPAD_ScanPads(); \
-	if (WPAD_ButtonsDown(0) & WPAD_BUTTON_HOME) { \
-		if (*(vu32*)0x80001804 != 0x53545542) \
-			SYS_ResetSystem(SYS_RETURNTOMENU, 0, 0); \
-		else \
-			return 0; \
-	} \
-	VIDEO_WaitVSync(); \
-}
-
-static const char* regions[4] = {"NTSC-U", "NTSC-J", "PAL", "NTSC-K"};
-static const u32 debug_gids[4] = {0x524d4345, 0x52534245, 0x534f5545, 0x525a4445};
-static const u32 release_gids[4] = {0x524d4345, 0x524d434a, 0x524d4350, 0x524d434b};
-u32 game_id;
-int gm_region;
+const char* regions[4] = {
+		[REGION_AMERICA] = "NTSC-U", 
+		[REGION_JAPAN] = "NTSC-J", 
+		[REGION_EUROPE] = "PAL", 
+		[REGION_KOREA] = "NTSC-K"
+	};
+const char* debug_gids[4] = {
+		[REGION_AMERICA] = "RMCE", 
+		[REGION_JAPAN] = "RMGE", 
+		[REGION_EUROPE] = "SB4E", 
+		[REGION_KOREA] = "SOUE"
+	};
+const char* release_gids[4] = {
+		[REGION_AMERICA] = "RMCE", 
+		[REGION_JAPAN] = "RMCJ", 
+		[REGION_EUROPE] = "RMCP", 
+		[REGION_KOREA] = "RMCK"
+	};
 
 int launch() {
-	u32 gids[4];
+	char* game_id;
+	int gm_region;
+	const char* gids[4];
 	if (debug_build) {
-		gids[0] = debug_gids[0];
-		gids[1] = debug_gids[1];
-		gids[2] = debug_gids[2];
-		gids[3] = debug_gids[3];
+		gids[REGION_AMERICA] = debug_gids[REGION_AMERICA];
+		gids[REGION_JAPAN] = debug_gids[REGION_JAPAN];
+		gids[REGION_EUROPE] = debug_gids[REGION_EUROPE];
+		gids[REGION_KOREA] = debug_gids[REGION_KOREA];
 	}
 	else {
-		gids[0] = release_gids[0];
-		gids[1] = release_gids[1];
-		gids[2] = release_gids[2];
-		gids[3] = release_gids[3];
+		gids[REGION_AMERICA] = release_gids[REGION_AMERICA];
+		gids[REGION_JAPAN] = release_gids[REGION_JAPAN];
+		gids[REGION_EUROPE] = release_gids[REGION_EUROPE];
+		gids[REGION_KOREA] = release_gids[REGION_KOREA];
 	}
 
 	printf("Init DI...\n");
 	
-	WDVD_Init();
-
+	Event_Wait(&apploader_event_disk_id);
+/*
 	if (!DiscInserted()) {
 		printf("Please insert a Mario Kart Wii Game Disc.\n\n");
 	}
@@ -56,11 +60,10 @@ int launch() {
 	}
 
 	printf("Checking disc...\n");
-
-	WDVD_Reset();
 	
-	game_id=check_disc();
-
+*/
+	game_id=os0->disc.gamename;
+/*
 	static const u32 disc_error=0;
 	static const u32 no_disc=1;
 		
@@ -72,32 +75,50 @@ int launch() {
 		printf("No disc is inserted.\n\n");
 		return 1;
 	}
-	else if ((game_id != gids[REGION_AMERICA] && game_id != gids[REGION_JAPAN] && game_id != gids[REGION_EUROPE] && game_id != gids[REGION_KOREA])) {
+*/
+	if (strcmp(game_id, gids[REGION_AMERICA]) && strcmp(game_id, gids[REGION_JAPAN]) && strcmp(game_id, gids[REGION_EUROPE]) && strcmp(game_id, gids[REGION_KOREA])) {
 		printf("Excuse me, princess! This isn't Mario Kart Wii!\n\n");
-		return 2;
+		return EWRONGDISC;
 	}
-	else if (game_id==gids[REGION_KOREA]) {
+	else if (strcmp(game_id, gids[REGION_KOREA])) {
 		printf("Korean support is not implemented!\n\n");
-		return 3;
+		return EDISCNOTSUPPORTED;
 	}
 	else {
-		if (game_id==gids[REGION_AMERICA]) {
+		if (strcmp(game_id, gids[REGION_AMERICA])) {
 			gm_region=REGION_AMERICA;
 		}
-		else if(game_id==gids[REGION_JAPAN]) {
+		else if (strcmp(game_id, gids[REGION_JAPAN])) {
 			gm_region=REGION_JAPAN;
 		}
-		else if(game_id==gids[REGION_EUROPE]) {
+		else if (strcmp(game_id, gids[REGION_EUROPE])) {
 			gm_region=REGION_EUROPE;
 		}
-		else if(game_id==gids[REGION_KOREA]) {
+		else if (strcmp(game_id, gids[REGION_KOREA])) {
 			gm_region=REGION_KOREA;
 		}
 		else {
-			return -1;
+			return EUNDEFINEDERROR;
 		}
 		printf("MKW detected, starting patch process (%s)...",regions[gm_region]);
-		return 0;
+		// patches go here
+		
+		apploader_game_entry_fn();
+
 	}
-	return -1;
+	return 0;
+}
+
+int HOME_EXIT() {
+	WPAD_ScanPads();
+	if (WPAD_ButtonsDown(0) & WPAD_BUTTON_HOME) {
+		if (*(vu32*)0x80001804 != 0x53545542) {
+			SYS_ResetSystem(SYS_RETURNTOMENU, 0, 0);
+		}
+		else {
+			return 1;
+		}
+	}
+	VIDEO_WaitVSync();
+	return 0;
 }
