@@ -20,6 +20,8 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
+ *
+ * Modified by aplumafreak500 for Luma's CT Pack Launcher
  */
 
 #include "module.h"
@@ -45,6 +47,8 @@
 #include "main.h"
 #include "search/search.h"
 #include "threads.h"
+
+#include "../../brainslug-modules/bslug-modules.h"
 
 typedef struct {
     size_t module;
@@ -80,17 +84,14 @@ static bslug_loader_entry_t *module_entries = NULL;
 static size_t module_entries_count = 0;
 static size_t module_entries_capacity = 0;
 
-static const char module_path[] = "sd:/bslug/modules";
-
 static void *Module_Main(void *arg);
 static void *Module_ListAllocate(
     void *list, size_t entry_size, size_t num,
     size_t *capacity, size_t *count, size_t default_capacity);
     
 static void Module_ListLoad(void);
-static void Module_CheckDirectory(char *path);
-static void Module_CheckFile(const char *path);
-static void Module_Load(const char *path);
+
+static void Module_Load(const u8 *image, size_t img_size, const char *path);
 static void Module_LoadElf(const char *path, Elf *elf);
 static bool Module_LoadElfSymtab(
     Elf *elf, Elf32_Sym **symtab, size_t *symtab_count, size_t *symtab_strndx);
@@ -100,7 +101,7 @@ static module_metadata_t *Module_MetadataRead(
 static bool Module_ElfLoadSection(
     const Elf *elf, Elf_Scn *scn, const Elf32_Shdr *shdr, void *destination);
 static void Module_ElfLoadSymbols(
-    size_t shndx, const const void *destination, 
+    size_t shndx, const void *destination, 
     Elf32_Sym *symtab, size_t symtab_count);
 static bool Module_ElfLink(
     size_t index, Elf *elf, size_t shndx, void *destination,
@@ -212,124 +213,67 @@ static void *Module_ListAllocate(
     return result;
 }
 
+#define mod_count 7
+
+static const struct {
+	const char name[32];
+	const u8 *image;
+} module_dict[mod_count+1] = {
+	{
+		.name = "console-gx.mod",
+		.image = console_gx_elf,
+	},
+	{
+		.name = "console-sd.mod",
+		.image = console_sd_elf,
+	},
+	{
+		.name = "gecko.mod",
+		.image = gecko_elf,
+	},
+	{
+		.name = "https.mod",
+		.image = https_elf,
+	},
+	{
+		.name = "libfat.mod",
+		.image = libfat_elf,
+	},
+	{
+		.name = "libfat-sd.mod",
+		.image = libfat_sd_elf,
+	},
+	{
+		.name = "libsd.mod",
+		.image = libsd_elf,
+	},
+	{
+		.name = "End of list",
+		.image = modules_end,
+	}
+};
+
 static void Module_ListLoad(void) {
-    char path[FILENAME_MAX];
-
-    Event_Wait(&main_event_fat_loaded);
-    
-    assert(sizeof(path) > sizeof(module_path));
-    
-    strcpy(path, module_path);
-    
-    Module_CheckDirectory(path);
+	u32 i;
+	for (i = 0; i < mod_count; i++) {
+		Module_Load(module_dict[i].image, (module_dict[i+1].image-module_dict[i].image), module_dict[i].name);
+	}
 }
 
-static void Module_CheckDirectory(char *path) {
-    DIR *dir;
-    
-    dir = opendir(path);
-    if (dir != NULL) {
-        struct dirent *entry;
-        
-        entry = readdir(dir);
-        while (entry != NULL) {
-            switch (entry->d_type) {
-                case DT_REG: { /* regular file */
-                    char *old_path_end;
-                    
-                    old_path_end = strchr(path, '\0');
-                    
-                    assert(old_path_end != NULL);
-                    
-                    /* efficiently concatenate /file_name */
-                    strncat(
-                        old_path_end, "/",
-                        FILENAME_MAX - (old_path_end - path));
-                    strncat(
-                        old_path_end, entry->d_name,
-                        FILENAME_MAX - (old_path_end - path));
-                    
-                    Module_CheckFile(path);
-                    
-                    /* reset back to the original path for next file */
-                    *old_path_end = '\0';
-                    break;
-                }
-                case DT_DIR: { /* directory */
-                    if (strcmp(entry->d_name, ".") == 0 ||
-                        strcmp(entry->d_name, "..") == 0)
-                        break;
-                    
-                    Event_Wait(&apploader_event_disk_id);
-                    
-                    /* load directories with a prefix match on the game name:
-                     * e.g. load directory RMC for game RMCP. */
-                    if (strncmp(os0->disc.gamename, entry->d_name,
-                        strlen(entry->d_name)) == 0) {
-                        
-                        char *old_path_end;
-                        
-                        old_path_end = strchr(path, '\0');
-                        
-                        assert(old_path_end != NULL);
-                        
-                        /* efficiently concatenate /directory_name */
-                        strncat(
-                            old_path_end, "/",
-                            FILENAME_MAX - (old_path_end - path));
-                        strncat(
-                            old_path_end, entry->d_name,
-                            FILENAME_MAX - (old_path_end - path));
-                        
-                        Module_CheckDirectory(path);
-                        
-                        /* reset back to the original path for next file */
-                        *old_path_end = '\0';
-                    }
-                    break;
-                }
-            }
-            entry = readdir(dir);
-        }
-        closedir(dir);
-    }
-}
-
-static void Module_CheckFile(const char *path) {
-    const char *extension;
-    
-    /* find the file extension */
-    extension = strrchr(path, '.');
-    if (extension == NULL)
-        extension = strchr(path, '\0');
-    else
-        extension++;
-        
-    assert(extension != NULL);
-    
-    if (strcmp(extension, "mod") == 0 ||
-        strcmp(extension, "o") == 0 ||
-        strcmp(extension, "a") == 0 ||
-        strcmp(extension, "elf") == 0) {
-        
-        Module_Load(path);
-    }
-}
-
-static void Module_Load(const char *path) {
-    int fd = -1;
+static void Module_Load(const u8 *image, size_t img_size, const char *path) {
     Elf *elf = NULL;
+    
+    if (path == NULL) {
+    	char tmp_path[17];
+    	sprintf(tmp_path, "mod_mem_0x%08lx", (u32)image);
+    	path = tmp_path;
+    }
     
     /* check for compile errors */
     if (elf_version(EV_CURRENT) == EV_NONE)
         goto exit_error;
-    
-    fd = open(path, O_RDONLY, 0);
-    
-    if (fd == -1)
-        goto exit_error;
         
-    elf = elf_begin(fd, ELF_C_READ, NULL);
+    elf = elf_memory((char*) image, img_size);
     
     if (elf == NULL)
         goto exit_error;
@@ -353,8 +297,6 @@ static void Module_Load(const char *path) {
 exit_error:
     if (elf != NULL)
         elf_end(elf);
-    if (fd != -1)
-        close(fd);
 }
 
 static void Module_LoadElf(const char *path, Elf *elf) {
@@ -821,7 +763,7 @@ static bool Module_ElfLoadSection(
 }
 
 static void Module_ElfLoadSymbols(
-        size_t shndx, const const void *destination,
+        size_t shndx, const void *destination,
         Elf32_Sym *symtab, size_t symtab_count) {
     
     size_t i;

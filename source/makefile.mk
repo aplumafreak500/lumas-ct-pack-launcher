@@ -6,6 +6,7 @@ SRC += $(WD)version.c
 SRC += $(WD)error.c
 
 include $(WD_SRC)brainslug/makefile.mk
+include $(WD_SRC)brainslug-modules/makefile.mk
 include $(WD_SRC)ctgp/makefile.mk
 include $(WD_SRC)files/makefile.mk
 include $(WD_SRC)gameregion/makefile.mk

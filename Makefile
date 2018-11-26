@@ -84,6 +84,8 @@ CFLAGS   += -O2 -Wall -x c -std=gnu99 \
             -DGEKKO -DHW_RVL -D__wii__ \
             -mrvl -mcpu=750 -meabi -mhard-float \
             -msdata=eabi -memb -ffunction-sections -fdata-sections
+            
+ASFLAGS  += -I include
 
 ###############################################################################
 # Parameters
@@ -151,8 +153,11 @@ LDFLAGS += $(patsubst %,-l %,$(LIBS)) $(patsubst %,-l %,$(LIBS)) \
            $(patsubst %,-L %,$(LIB_DIRS)) $(patsubst %,-L %/lib,$(LIB_DIRS))
 CFLAGS  += $(patsubst %,-I %,$(INC_DIRS)) \
            $(patsubst %,-I %/include,$(LIB_DIRS)) -iquote src
+           
+ASFLAGS += -I include -I source
 
-OBJECTS := $(patsubst %.c,$(BUILD)/%.c.o,$(filter %.c,$(SRC)))
+OBJECTS += $(patsubst %.c,$(BUILD)/%.c.o,$(filter %.c,$(SRC)))
+OBJECTS += $(patsubst %.s,$(BUILD)/%.s.o,$(filter %.s,$(SRC)))
           
 ifeq ($(words $(filter clean%,$(MAKECMDGOALS))),0)
   include $(patsubst %.c,$(BUILD)/%.c.d,$(filter %.c,$(SRC)))
@@ -204,6 +209,11 @@ $(BUILD)/%.c.d: %.c | $(BUILD)
 	$Q{ $(CC) -MP -MM -MT $(@:.d=.o) $(CFLAGS) $< > $@ \
 	&& $(RM) $@.tmp; } \
 	|| { $(RM) $@.tmp && false; }
+
+$(BUILD)/%.s.o: %.s | $(BUILD)
+	$(LOG)
+	-$Qmkdir -p $(dir $@)
+	$Q$(AS) $(ASFLAGS) $< -o $@
 
 ###############################################################################
 # Assembly listing rules

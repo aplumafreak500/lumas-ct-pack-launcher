@@ -10,6 +10,8 @@
 
 #include "launcher/launcher.h"
 #include "apploader/apploader.h"
+#include "modules/module.h"
+#include "search/search.h"
 #include "library/event.h"
 #include "version.h"
 #include "threads.h"
@@ -27,19 +29,18 @@ int main(void) {
 	SYS_SetArena1Hi((void *)0x81200000);
 	
 	/* initialise all subsystems */
-//	if (!Event_Init(&main_event_fat_loaded)) {
-//		goto exit;
-//	}
 	if (!Apploader_Init()) {
-		ret=EAPPLOADERERR;
+		ret = EAPPLOADERERR;
 		goto exit;
 	}
-//	if (!Module_Init()) {
-//		goto exit;
-//	}
-//	if (!Search_Init()) {
-//		goto exit;
-//	}
+	if (!Module_Init()) {
+		ret = EMODULEERR;
+		goto exit;
+	}
+	if (!Search_Init()) {
+		ret = EMODULEERR;
+		goto exit;
+	}
 
 	/* main thread is UI, so set thread prior to UI */
 	LWP_SetThreadPriority(LWP_GetSelf(), THREAD_PRIO_UI);
@@ -64,12 +65,14 @@ int main(void) {
 		ret=EAPPLOADERERR;
 		goto exit;
 	}
-//	if (!Module_RunBackground()) {
-//		goto exit;
-//	}
-//	if (!Search_RunBackground()) {
-//		goto exit;
-//	}
+	if (!Module_RunBackground()) {
+		ret = EMODULEERR;
+		goto exit;
+	}
+	if (!Search_RunBackground()) {
+		ret = EMODULEERR;
+		goto exit;
+	}
 	
 	VIDEO_Configure(rmode);
 	VIDEO_SetNextFramebuffer(xfb);

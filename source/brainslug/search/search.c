@@ -20,6 +20,8 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
+ *
+ * Modified by aplumafreak500 for Luma's CT Pack Launcher
  */
 
 /* This file should ideally avoid Wii specific methods so unit testing can be
@@ -42,6 +44,8 @@
 #include "search/symbol.h"
 #include "main.h"
 #include "threads.h"
+
+#include "../../brainslug-modules/bslug-symbols.h"
 
 typedef struct {
     void *address;
@@ -69,15 +73,11 @@ bool search_has_info;
 
 static fsm_t *search_fsm = NULL;
 
-static const char search_path[] = "sd:/bslug/symbols";
-
 static void *search_symbol__start;
 
 static void *Search_Main(void *arg);
 static void Search_SymbolsLoad(void);
-static void Search_CheckDirectory(char *path);
-static void Search_CheckFile(const char *path);
-static void Search_Load(const char *path);
+static void Search_Load(const char *xml, const char *name);
 static bool Search_BuildFSM(void);
 static void Search_SymbolMatch(symbol_index_t symbol, uint8_t *addr);
 static int Search_ModuleSymbolCompare(const void *left, const void *right);
@@ -146,122 +146,95 @@ exit_error:
     return NULL;
 }
 
+#define xml_count 15
+
+static const struct {
+	const char name[32];
+	const char *xml;
+} xml_dict[xml_count+1] = {
+	{
+		.name = "cache.xml",
+		.xml = cache_xml,
+	},
+	{
+		.name = "ctype.xml",
+		.xml = ctype_xml,
+	},
+	{
+		.name = "dwc.xml",
+		.xml = dwc_xml,
+	},
+	{
+		.name = "GXFrameBuf.xml",
+		.xml = GXFrameBuf_xml,
+	},
+	{
+		.name = "GXTransform.xml",
+		.xml = GXTransform_xml,
+	},
+	{
+		.name = "hook.xml",
+		.xml = hook_xml,
+	},
+	{
+		.name = "ipc.xml",
+		.xml = ipc_xml,
+	},
+	{
+		.name = "md5.xml",
+		.xml = md5_xml,
+	},
+	{
+		.name = "OSMutex.xml",
+		.xml = OSMutex_xml,
+	},
+	{
+		.name = "OSThread.xml",
+		.xml = OSThread_xml,
+	},
+	{
+		.name = "OSTime.xml",
+		.xml = OSTime_xml,
+	},
+	{
+		.name = "OSUtf.xml",
+		.xml = OSUtf_xml,
+	},
+	{
+		.name = "stdio.xml",
+		.xml = stdio_xml,
+	},
+	{
+		.name = "string.xml",
+		.xml = string_xml,
+	},
+	{
+		.name = "vi.xml",
+		.xml = vi_xml,
+	},
+	{
+		.name = "End of list",
+		.xml = symbols_end,
+	}
+};
+
 static void Search_SymbolsLoad(void) {
-    char path[FILENAME_MAX];
-
-    Event_Wait(&main_event_fat_loaded);
-    
-    assert(sizeof(path) > sizeof(search_path));
-    
-    strcpy(path, search_path);
-    
-    Search_CheckDirectory(path);
+	u32 i;
+	for (i = 0; i < xml_count; i++) {
+		Search_Load(xml_dict[i].xml, xml_dict[i].name);
+	}
 }
 
-static void Search_CheckDirectory(char *path) {
-    DIR *dir;
-    
-    dir = opendir(path);
-    if (dir != NULL) {
-        struct dirent *entry;
-        
-        entry = readdir(dir);
-        while (entry != NULL) {
-            switch (entry->d_type) {
-                case DT_REG: { /* regular file */
-                    char *old_path_end;
-                    
-                    old_path_end = strchr(path, '\0');
-                    
-                    assert(old_path_end != NULL);
-                    
-                    /* efficiently concatenate /file_name */
-                    strncat(
-                        old_path_end, "/",
-                        FILENAME_MAX - (old_path_end - path));
-                    strncat(
-                        old_path_end, entry->d_name,
-                        FILENAME_MAX - (old_path_end - path));
-                    
-                    Search_CheckFile(path);
-                    
-                    /* reset back to the original path for next file */
-                    *old_path_end = '\0';
-                    break;
-                }
-                case DT_DIR: { /* directory */
-                    if (strcmp(entry->d_name, ".") == 0 ||
-                        strcmp(entry->d_name, "..") == 0)
-                        break;
-                    
-                    Event_Wait(&apploader_event_disk_id);
-                    
-                    /* load directories with a prefix match on the game name:
-                     * e.g. load directory RMC for game RMCP. */
-                    if (strncmp(os0->disc.gamename, entry->d_name,
-                        strlen(entry->d_name)) == 0) {
-                        
-                        char *old_path_end;
-                        
-                        old_path_end = strchr(path, '\0');
-                        
-                        assert(old_path_end != NULL);
-                        
-                        /* efficiently concatenate /directory_name */
-                        strncat(
-                            old_path_end, "/",
-                            FILENAME_MAX - (old_path_end - path));
-                        strncat(
-                            old_path_end, entry->d_name,
-                            FILENAME_MAX - (old_path_end - path));
-                        
-                        Search_CheckDirectory(path);
-                        
-                        /* reset back to the original path for next file */
-                        *old_path_end = '\0';
-                    }
-                    break;
-                }
-            }
-            entry = readdir(dir);
-        }
-        closedir(dir);
+static void Search_Load(const char *xml, const char *name) {
+    if (name == NULL) {
+    	char tmp_path[17];
+    	sprintf(tmp_path, "xml_mem_0x%08lx", (u32)xml);
+    	name = tmp_path;
     }
-}
-
-static void Search_CheckFile(const char *path) {
-    const char *extension;
-    
-    /* find the file extension */
-    extension = strrchr(path, '.');
-    if (extension == NULL)
-        extension = strchr(path, '\0');
-    else
-        extension++;
-        
-    assert(extension != NULL);
-    
-    if (strcmp(extension, "xml") == 0) {
-        Search_Load(path);
-    }
-}
-
-static void Search_Load(const char *path) {
-    FILE *file = NULL;
-    
-    file = fopen(path, "r");
-    if (file == NULL)
-        goto exit_error;
-    
-    if (!Symbol_ParseFile(file)) {
-        printf("Could not load symbol file %s.\n", path);
+    if (!Symbol_ParseString(xml, name)) {
+        printf("Could not load symbol file %s.\n", name);
         search_has_info = true;
-        goto exit_error;
     }
-    
-exit_error:
-    if (file != NULL)
-        fclose(file);
 }
 
 static bool Search_BuildFSM(void) {

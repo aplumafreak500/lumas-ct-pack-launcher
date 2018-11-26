@@ -91,14 +91,14 @@ symbol_t *Symbol_GetSymbol(symbol_index_t index) {
     return &symbol_globals[index];
 }
 
-bool Symbol_ParseFile(FILE *file) {
+bool Symbol_ParseString(const char *xml, const char *name) {
     bool result = false, set_debug;
     mxml_node_t *xml_tree = NULL;
     mxml_node_t *xml_symbols = NULL;
     mxml_node_t *xml_symbol = NULL;
     const char *debug;
 
-    xml_tree = mxmlLoadFile(NULL, file, MXML_TEXT_CALLBACK);
+    xml_tree = mxmlLoadString(NULL, xml, MXML_TEXT_CALLBACK);
     if (xml_tree == NULL)
         goto exit_error;
     /* <symbols> root element */
