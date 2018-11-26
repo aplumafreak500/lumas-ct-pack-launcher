@@ -8,4 +8,4 @@ const char* debug_gids[4];
 const char* release_gids[4];
 
 int launch();
-int HOME_EXIT();
+void HOME_EXIT();

@@ -13,22 +13,22 @@
 #include "error.h"
 
 const char* regions[4] = {
-		[REGION_AMERICA] = "NTSC-U", 
-		[REGION_JAPAN] = "NTSC-J", 
-		[REGION_EUROPE] = "PAL", 
-		[REGION_KOREA] = "NTSC-K"
+		[REGION_AMERICA] = "NTSC-U\0",
+		[REGION_JAPAN] = "NTSC-J\0",
+		[REGION_EUROPE] = "PAL\0",
+		[REGION_KOREA] = "NTSC-K\0"
 	};
 const char* debug_gids[4] = {
-		[REGION_AMERICA] = "RMCE", 
-		[REGION_JAPAN] = "RMGE", 
-		[REGION_EUROPE] = "SB4E", 
-		[REGION_KOREA] = "SOUE"
+		[REGION_AMERICA] = "RMCE\0",
+		[REGION_JAPAN] = "RMGE\0",
+		[REGION_EUROPE] = "SB4E\0",
+		[REGION_KOREA] = "SOUE\0"
 	};
 const char* release_gids[4] = {
-		[REGION_AMERICA] = "RMCE", 
-		[REGION_JAPAN] = "RMCJ", 
-		[REGION_EUROPE] = "RMCP", 
-		[REGION_KOREA] = "RMCK"
+		[REGION_AMERICA] = "RMCE\0",
+		[REGION_JAPAN] = "RMCJ\0",
+		[REGION_EUROPE] = "RMCP\0",
+		[REGION_KOREA] = "RMCK\0"
 	};
 
 int launch() {
@@ -51,50 +51,30 @@ int launch() {
 	printf("Init DI...\n");
 	
 	Event_Wait(&apploader_event_disk_id);
-/*
-	if (!DiscInserted()) {
-		printf("Please insert a Mario Kart Wii Game Disc.\n\n");
-	}
-	while (!DiscInserted()) {
-		HOME_EXIT();
-	}
 
-	printf("Checking disc...\n");
-	
-*/
+	printf("Please insert a Mario Kart Wii Game Disc.\n\n");
+
 	game_id=os0->disc.gamename;
-/*
-	static const u32 disc_error=0;
-	static const u32 no_disc=1;
-		
-	if (game_id==disc_error) {
-		printf("Disc read error!\n\n");
-		return -1;
-	}
-	else if (game_id==no_disc) {
-		printf("No disc is inserted.\n\n");
-		return 1;
-	}
-*/
-	if (strcmp(game_id, gids[REGION_AMERICA]) && strcmp(game_id, gids[REGION_JAPAN]) && strcmp(game_id, gids[REGION_EUROPE]) && strcmp(game_id, gids[REGION_KOREA])) {
+
+	if (memcmp(game_id, gids[REGION_AMERICA], 4) && memcmp(game_id, gids[REGION_JAPAN], 4) && memcmp(game_id, gids[REGION_EUROPE], 4) && memcmp(game_id, gids[REGION_KOREA], 4)) {
 		printf("Excuse me, princess! This isn't Mario Kart Wii!\n\n");
 		return EWRONGDISC;
 	}
-	else if (strcmp(game_id, gids[REGION_KOREA])) {
+	else if (memcmp(game_id, gids[REGION_KOREA], 4)) {
 		printf("Korean support is not implemented!\n\n");
 		return EDISCNOTSUPPORTED;
 	}
 	else {
-		if (strcmp(game_id, gids[REGION_AMERICA])) {
+		if (memcmp(game_id, gids[REGION_AMERICA], 4)) {
 			gm_region=REGION_AMERICA;
 		}
-		else if (strcmp(game_id, gids[REGION_JAPAN])) {
+		else if (memcmp(game_id, gids[REGION_JAPAN], 4)) {
 			gm_region=REGION_JAPAN;
 		}
-		else if (strcmp(game_id, gids[REGION_EUROPE])) {
+		else if (memcmp(game_id, gids[REGION_EUROPE], 4)) {
 			gm_region=REGION_EUROPE;
 		}
-		else if (strcmp(game_id, gids[REGION_KOREA])) {
+		else if (memcmp(game_id, gids[REGION_KOREA], 4)) {
 			gm_region=REGION_KOREA;
 		}
 		else {
@@ -108,17 +88,18 @@ int launch() {
 	}
 	return 0;
 }
-
-int HOME_EXIT() {
-	WPAD_ScanPads();
-	if (WPAD_ButtonsDown(0) & WPAD_BUTTON_HOME) {
-		if (*(vu32*)0x80001804 != 0x53545542) {
-			SYS_ResetSystem(SYS_RETURNTOMENU, 0, 0);
+void HOME_EXIT() {
+	while (1) {
+		WPAD_ScanPads();
+		if (WPAD_ButtonsDown(0) & WPAD_BUTTON_HOME) {
+			if (*(vu32*)0x80001804 != 0x53545542) {
+				SYS_ResetSystem(SYS_RETURNTOMENU, 0, 0);
+			}
+			else {
+				// return to loader
+			}
+			break;
 		}
-		else {
-			return true;
-		}
+		VIDEO_WaitVSync();
 	}
-	VIDEO_WaitVSync();
-	return false;
 }

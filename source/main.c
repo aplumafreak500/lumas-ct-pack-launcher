@@ -90,18 +90,17 @@ int main(void) {
 	
 	ret=launch();
 
+exit:
+
 	if (ret!=0) {
 		printf("Press Home to exit...");
-		while (HOME_EXIT()) {}
 	}
-exit:
+	HOME_EXIT();
 	VIDEO_SetBlack(true);
 	VIDEO_Flush();
 	VIDEO_WaitVSync();
     
 	free(xfb);
-        
-	exit(ret);
         
 	return ret;
 }

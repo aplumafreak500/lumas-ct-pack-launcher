@@ -4,5 +4,5 @@
 const u16 version=0;
 const u16 subversion=0;
 const u16 revision=0;
-const u16 build=0x100 | 8;
+const u16 build=0x100 | 12;
 const bool debug_build=false;
