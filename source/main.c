@@ -91,7 +91,7 @@ int main(void) {
 	}
 	printf("\n");
 	
-	ret=launch();
+	ret=launch(); // TODO: If there's an error, try again, but allow home to be pressed
 
 exit:
 

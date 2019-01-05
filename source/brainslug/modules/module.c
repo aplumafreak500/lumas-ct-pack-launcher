@@ -1095,19 +1095,19 @@ exit_error:
 }
 
 static bool Module_LinkModule(size_t index, const char *path, uint8_t **space) {
-    int fd = -1;
     Elf *elf = NULL;
     bool result = false;
     
     /* check for compile errors */
     assert(elf_version(EV_CURRENT) != EV_NONE);
     
-    fd = open(path, O_RDONLY, 0);
-    
-    if (fd == -1)
-        goto exit_error;
+    if (path == NULL) {
+    	char tmp_path[17];
+    	sprintf(tmp_path, "mod_mem_0x%08lx", (u32)image);
+    	path = tmp_path;
+    }
         
-    elf = elf_begin(fd, ELF_C_READ, NULL);
+    elf = elf_memory((char*) image, img_size);
     
     if (elf == NULL)
         goto exit_error;
@@ -1129,8 +1129,6 @@ exit_error:
     if (!result) printf("Module_LinkModule: exit_error\n");
     if (elf != NULL)
         elf_end(elf);
-    if (fd != -1)
-        close(fd);
     return result;
 }
 

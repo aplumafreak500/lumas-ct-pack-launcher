@@ -13,23 +13,23 @@
 #include "error.h"
 
 const char* regions[4] = {
-		[REGION_AMERICA] = "NTSC-U\0",
-		[REGION_JAPAN] = "NTSC-J\0",
-		[REGION_EUROPE] = "PAL\0",
-		[REGION_KOREA] = "NTSC-K\0"
-	};
+	[REGION_AMERICA] = "NTSC-U\0",
+	[REGION_JAPAN] = "NTSC-J\0",
+	[REGION_EUROPE] = "PAL\0",
+	[REGION_KOREA] = "NTSC-K\0"
+};
 const char* debug_gids[4] = {
-		[REGION_AMERICA] = "RMCE\0",
-		[REGION_JAPAN] = "RMGE\0",
-		[REGION_EUROPE] = "SB4E\0",
-		[REGION_KOREA] = "SOUE\0"
-	};
+	[REGION_AMERICA] = "RMCE\0",
+	[REGION_JAPAN] = "RMGE\0",
+	[REGION_EUROPE] = "SB4E\0",
+	[REGION_KOREA] = "SOUE\0"
+};
 const char* release_gids[4] = {
-		[REGION_AMERICA] = "RMCE\0",
-		[REGION_JAPAN] = "RMCJ\0",
-		[REGION_EUROPE] = "RMCP\0",
-		[REGION_KOREA] = "RMCK\0"
-	};
+	[REGION_AMERICA] = "RMCE\0",
+	[REGION_JAPAN] = "RMCJ\0",
+	[REGION_EUROPE] = "RMCP\0",
+	[REGION_KOREA] = "RMCK\0"
+};
 
 int launch() {
 	char* game_id;
@@ -89,15 +89,13 @@ int launch() {
 	return 0;
 }
 void HOME_EXIT() {
-	while (1) {
-		WPAD_ScanPads();
-		if (WPAD_ButtonsDown(0) & WPAD_BUTTON_HOME) {
+	while (true) {
+		WPAD_ScanPads(); // todo: GC, DRC, physical power button
+		if (WPAD_ButtonsDown(0) & (WPAD_BUTTON_HOME | WPAD_BUTTON_CLASSIC_HOME)) {
 			if (*(vu32*)0x80001804 != 0x53545542) {
 				SYS_ResetSystem(SYS_RETURNTOMENU, 0, 0);
 			}
-			else {
-				// return to loader
-			}
+			// else return to loader - nothing else needed here
 			break;
 		}
 		VIDEO_WaitVSync();
