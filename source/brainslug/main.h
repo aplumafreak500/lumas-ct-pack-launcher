@@ -25,7 +25,7 @@
 #ifndef MAIN_H_
 #define MAIN_H_
 
-#include <bslug_include/version.h>
+#include "bs-version.h"
 
 #include "library/event.h"
 
