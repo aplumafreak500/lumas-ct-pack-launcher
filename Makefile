@@ -50,7 +50,7 @@ LD      := $(PREFIX)gcc
 CC      := $(PREFIX)gcc
 OBJDUMP := $(PREFIX)objdump
 OBJCOPY := $(PREFIX)objcopy
-ELF2DOL ?= $(DEVKITPPC)/bin/elf2dol
+ELF2DOL ?= $(DEVKITPRO)/tools/bin/elf2dol
 
 # -O2: optimise lots
 # -Wl$C--gc-sections: remove unneeded symbols
