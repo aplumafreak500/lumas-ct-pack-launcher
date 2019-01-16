@@ -27,7 +27,7 @@
 #include "module.h"
 
 #include <assert.h>
-#include <bslug_include/bslug.h>
+#include "bslug.h"
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -112,7 +112,7 @@ static bool Module_ElfLinkOne(
     uint32_t symbol_addr);
     
 static bool Module_ListLink(uint8_t **space);
-static bool Module_LinkModule(size_t index, const char *path, uint8_t **space);
+static bool Module_LinkModule(size_t index, const char *path, uint8_t **space, const u8 *image, size_t img_size);
 static bool Module_LinkModuleElf(size_t index, Elf *elf, uint8_t **space);
 
 static bool Module_ListLoadSymbols(uint8_t **space);
@@ -1084,7 +1084,7 @@ static bool Module_ListLink(uint8_t **space) {
     bool result = false;
     
     for (i = 0; i < module_list_count; i++) {
-        if (!Module_LinkModule(i, module_list[i]->path, space))
+        if (!Module_LinkModule(i, module_list[i]->path, space, module_list[i]->image, module_list[i]->size))
             goto exit_error;
     }
     
@@ -1094,7 +1094,7 @@ exit_error:
     return result;
 }
 
-static bool Module_LinkModule(size_t index, const char *path, uint8_t **space) {
+static bool Module_LinkModule(size_t index, const char *path, uint8_t **space, const u8 *image, size_t img_size) {
     Elf *elf = NULL;
     bool result = false;
     
@@ -1103,7 +1103,7 @@ static bool Module_LinkModule(size_t index, const char *path, uint8_t **space) {
     
     if (path == NULL) {
     	char tmp_path[17];
-    	sprintf(tmp_path, "mod_mem_0x%08lx", (u32)image);
+    	sprintf(tmp_path, "mod_mem_0x%08lx", (u32) image);
     	path = tmp_path;
     }
         
