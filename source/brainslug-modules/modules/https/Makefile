@@ -22,7 +22,7 @@ GCC_VER := $(shell $(DEVKITPPC)/bin/powerpc-eabi-gcc -dumpversion)
 PATH := $(DEVKITPPC)/bin:$(PATH)
 LIB_INC_DIRS := $(DEVKITPPC)/lib/gcc/powerpc-eabi/$(GCC_VER)/include \
                 $(DEVKITPPC)/lib/gcc/powerpc-eabi/$(GCC_VER)/include-fixed \
-                $(BSLUGDIR)/include
+                ../../include
 
 include makefile.mk
 
@@ -60,10 +60,10 @@ OBJDUMP := $(PREFIX)objdump
 # -T: use the linker script specified (to force certain bslug sections together)
 # -Map: generate a map file
 LDFLAGS  += --relocatable -s --gc-sections -u bslug_load -u bslug_meta \
-            -T $(BSLUGDIR)/bslug.ld \
+            -T ../../bslug.ld \
             $(patsubst %,-Map %,$(strip $(MAP)))
 LD1FLAGS += --relocatable -s \
-            -T $(BSLUGDIR)/bslug_elf.ld
+            -T ../../bslug_elf.ld
 
 # -O2: optimise lots
 # -Wall: generate lots of warnings

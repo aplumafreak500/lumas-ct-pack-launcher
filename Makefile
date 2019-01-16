@@ -116,7 +116,7 @@ SRC      :=
 # Phony targets
 PHONY    :=
 # Include directories
-INC_DIRS := . include source source/brainslug
+INC_DIRS := . include source source/brainslug source/brainslug-modules/include
 # Library directories
 LIB_DIRS := $(DEVKITPPC) $(DEVKITPPC)/powerpc-eabi \
             $(DEVKITPRO)/libogc $(DEVKITPRO)/libogc/lib/wii \
@@ -151,8 +151,7 @@ include source/makefile.mk
 
 LDFLAGS += $(patsubst %,-l %,$(LIBS)) $(patsubst %,-l %,$(LIBS)) \
            $(patsubst %,-L %,$(LIB_DIRS)) $(patsubst %,-L %/lib,$(LIB_DIRS))
-CFLAGS  += $(patsubst %,-I %,$(INC_DIRS)) \
-           $(patsubst %,-I %/include,$(LIB_DIRS)) -iquote src
+CFLAGS  += $(patsubst %,-I %/include,$(LIB_DIRS)) $(patsubst %,-iquote %,$(INC_DIRS)) -I source/brainslug/libelf
            
 ASFLAGS += -I include -I source
 
