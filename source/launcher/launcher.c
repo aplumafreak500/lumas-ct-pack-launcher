@@ -91,7 +91,7 @@ int launch() {
 void HOME_EXIT() {
 	while (true) {
 		WPAD_ScanPads(); // todo: GC, DRC, physical power button
-		if (WPAD_ButtonsDown(0) & (WPAD_BUTTON_HOME | WPAD_BUTTON_CLASSIC_HOME)) {
+		if (WPAD_ButtonsDown(0) & (WPAD_BUTTON_HOME | WPAD_CLASSIC_BUTTON_HOME)) {
 			if (*(vu32*)0x80001804 != 0x53545542) {
 				SYS_ResetSystem(SYS_RETURNTOMENU, 0, 0);
 			}
