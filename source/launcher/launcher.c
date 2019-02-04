@@ -34,53 +34,47 @@ const char* release_gids[4] = {
 int launch() {
 	char* game_id;
 	int gm_region;
-	const char* gids[4];
+	const char* gids[4] = {NULL, NULL, NULL, NULL};
 	if (debug_build) {
-		gids[REGION_AMERICA] = debug_gids[REGION_AMERICA];
-		gids[REGION_JAPAN] = debug_gids[REGION_JAPAN];
-		gids[REGION_EUROPE] = debug_gids[REGION_EUROPE];
-		gids[REGION_KOREA] = debug_gids[REGION_KOREA];
+		memcpy(gids, debug_gids, sizeof(debug_gids));
 	}
 	else {
-		gids[REGION_AMERICA] = release_gids[REGION_AMERICA];
-		gids[REGION_JAPAN] = release_gids[REGION_JAPAN];
-		gids[REGION_EUROPE] = release_gids[REGION_EUROPE];
-		gids[REGION_KOREA] = release_gids[REGION_KOREA];
+		memcpy(gids, release_gids, sizeof(release_gids));
 	}
 
 	printf("Init DI...\n");
+
+	printf("Please insert a Mario Kart Wii Game Disc.\n\n");
 	
 	Event_Wait(&apploader_event_disk_id);
 
-	printf("Please insert a Mario Kart Wii Game Disc.\n\n");
-
 	game_id=os0->disc.gamename;
 
-	if (memcmp(game_id, gids[REGION_AMERICA], 4) && memcmp(game_id, gids[REGION_JAPAN], 4) && memcmp(game_id, gids[REGION_EUROPE], 4) && memcmp(game_id, gids[REGION_KOREA], 4)) {
+	if (!((memcmp(game_id, gids[REGION_AMERICA], 4) == 0) || (memcmp(game_id, gids[REGION_JAPAN], 4) == 0) || (memcmp(game_id, gids[REGION_EUROPE], 4) == 0) || (memcmp(game_id, gids[REGION_KOREA], 4) == 0))) {
 		printf("Excuse me, princess! This isn't Mario Kart Wii!\n\n");
 		return EWRONGDISC;
 	}
-	else if (memcmp(game_id, gids[REGION_KOREA], 4)) {
+	else if (memcmp(game_id, gids[REGION_KOREA], 4) == 0) {
 		printf("Korean support is not implemented!\n\n");
 		return EDISCNOTSUPPORTED;
 	}
 	else {
-		if (memcmp(game_id, gids[REGION_AMERICA], 4)) {
+		if (memcmp(game_id, gids[REGION_AMERICA], 4) == 0) {
 			gm_region=REGION_AMERICA;
 		}
-		else if (memcmp(game_id, gids[REGION_JAPAN], 4)) {
+		else if (memcmp(game_id, gids[REGION_JAPAN], 4) == 0) {
 			gm_region=REGION_JAPAN;
 		}
-		else if (memcmp(game_id, gids[REGION_EUROPE], 4)) {
+		else if (memcmp(game_id, gids[REGION_EUROPE], 4) == 0) {
 			gm_region=REGION_EUROPE;
 		}
-		else if (memcmp(game_id, gids[REGION_KOREA], 4)) {
+		else if (memcmp(game_id, gids[REGION_KOREA], 4) == 0) {
 			gm_region=REGION_KOREA;
 		}
 		else {
 			return EUNDEFINEDERROR;
 		}
-		printf("MKW detected, starting patch process (%s)...",regions[gm_region]);
+		printf("MKW detected, starting patch process (%s)...", regions[gm_region]);
 		// patches go here
 		
 		apploader_game_entry_fn();
@@ -101,3 +95,4 @@ void HOME_EXIT() {
 		VIDEO_WaitVSync();
 	}
 }
+
