@@ -85,7 +85,7 @@ bool Apploader_RunBackground(void) {
     lwp_t thread;
     
     ret = LWP_CreateThread(
-        &thread, &Aploader_Main,
+        &thread, &Apploader_Main,
         NULL, NULL, 0, THREAD_PRIO_IO);
         
     if (ret) {
