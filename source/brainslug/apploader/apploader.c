@@ -72,7 +72,7 @@ uint8_t *apploader_app1_end = NULL;
 
 static u32 apploader_ipc_tmd[0x4A00 / 4] ATTRIBUTE_ALIGN(32);
 
-static void *Aploader_Main(void *arg);
+static void *Apploader_Main(void *arg);
 
 bool Apploader_Init(void) {
     return 
@@ -107,7 +107,7 @@ void Apploader_Report(const char *format, ...) {
 #endif
 }
     
-static void *Aploader_Main(void *arg) {
+static void *Apploader_Main(void *arg) {
     int ret, i;
     contents_t ipc_toc[4] ATTRIBUTE_ALIGN(32);
     partition_info_t ipc_partition_info[4] ATTRIBUTE_ALIGN(32);
