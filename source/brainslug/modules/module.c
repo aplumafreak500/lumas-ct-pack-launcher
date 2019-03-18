@@ -92,12 +92,12 @@ static void *Module_ListAllocate(
 static void Module_ListLoad(void);
 
 static void Module_Load(const u8 *image, size_t img_size, const char *path);
-static void Module_LoadElf(const char *path, Elf *elf);
+static void Module_LoadElf(const char *path, Elf *elf, const u8* image);
 static bool Module_LoadElfSymtab(
     Elf *elf, Elf32_Sym **symtab, size_t *symtab_count, size_t *symtab_strndx);
 static module_metadata_t *Module_MetadataRead(
     const char *path, size_t index, Elf *elf, 
-    Elf32_Sym *symtab, size_t symtab_count, size_t symtab_strndx);
+    Elf32_Sym *symtab, size_t symtab_count, size_t symtab_strndx, const u8* image);
 static bool Module_ElfLoadSection(
     const Elf *elf, Elf_Scn *scn, const Elf32_Shdr *shdr, void *destination);
 static void Module_ElfLoadSymbols(
@@ -264,8 +264,8 @@ static void Module_Load(const u8 *image, size_t img_size, const char *path) {
     Elf *elf = NULL;
     
     if (path == NULL) {
-    	char tmp_path[17];
-    	sprintf(tmp_path, "mod_mem_0x%08lx", (u32)image);
+    	char tmp_path[64];
+    	sprintf(tmp_path, "mod_mem_0x%08x", (u32) image);
     	path = tmp_path;
     }
     
@@ -286,7 +286,7 @@ static void Module_Load(const u8 *image, size_t img_size, const char *path) {
             module_has_info = true;
             goto exit_error;
         case ELF_K_ELF:
-            Module_LoadElf(path, elf);
+            Module_LoadElf(path, elf, image);
             break;
         default:
             printf(
@@ -299,7 +299,7 @@ exit_error:
         elf_end(elf);
 }
 
-static void Module_LoadElf(const char *path, Elf *elf) {
+static void Module_LoadElf(const char *path, Elf *elf, const u8* image) {
     Elf_Scn *scn;
     Elf32_Ehdr *ehdr;
     char *ident;
@@ -369,9 +369,9 @@ static void Module_LoadElf(const char *path, Elf *elf) {
     }
         
     assert(symtab != NULL);
-        
+
     metadata = Module_MetadataRead(
-        path, module_list_count, elf, symtab, symtab_count, symtab_strndx);
+        path, module_list_count, elf, symtab, symtab_count, symtab_strndx, image);
     
     if (metadata == NULL) /* error reporting done inside method */
         goto exit_error;
@@ -507,7 +507,7 @@ exit_error:
 
 static module_metadata_t *Module_MetadataRead(
         const char *path, size_t index, Elf *elf,
-        Elf32_Sym *symtab, size_t symtab_count, size_t symtab_strndx) {
+        Elf32_Sym *symtab, size_t symtab_count, size_t symtab_strndx, const u8* image) {
     char *metadata = NULL, *metadata_cur, *metadata_end, *tmp;
     const char *game, *name, *author, *version, *license, *bslug;
     module_metadata_t *ret = NULL;
@@ -726,6 +726,7 @@ static module_metadata_t *Module_MetadataRead(
     ret->license = tmp;
     ret->size = 0;
     ret->entries_count = entries_count;
+    ret->image = (char*) image;
     
 exit_error:
     if (metadata != NULL)
@@ -1084,7 +1085,7 @@ static bool Module_ListLink(uint8_t **space) {
     bool result = false;
     
     for (i = 0; i < module_list_count; i++) {
-        if (!Module_LinkModule(i, module_list[i]->path, space, module_list[i]->image, module_list[i]->size))
+        if (!Module_LinkModule(i, module_list[i]->path, space, (u8*) module_list[i]->image, module_list[i+1]->image-module_list[i]->image))
             goto exit_error;
     }
     
@@ -1103,7 +1104,7 @@ static bool Module_LinkModule(size_t index, const char *path, uint8_t **space, c
     
     if (path == NULL) {
     	char tmp_path[17];
-    	sprintf(tmp_path, "mod_mem_0x%08lx", (u32) image);
+    	sprintf(tmp_path, "mod_mem_0x%08x", (u32) image);
     	path = tmp_path;
     }
         
@@ -1466,3 +1467,4 @@ exit_error:
     if (!result) printf("Module_ListLinkFinalReplaceFunction: exit_error\n");
     return result;
 }
+
