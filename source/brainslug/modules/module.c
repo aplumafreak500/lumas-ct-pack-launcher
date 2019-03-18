@@ -1103,7 +1103,7 @@ static bool Module_LinkModule(size_t index, const char *path, uint8_t **space, c
     assert(elf_version(EV_CURRENT) != EV_NONE);
     
     if (path == NULL) {
-    	char tmp_path[17];
+    	char tmp_path[64];
     	sprintf(tmp_path, "mod_mem_0x%08x", (u32) image);
     	path = tmp_path;
     }
