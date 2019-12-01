@@ -154,14 +154,14 @@ bool Symbol_ParseString(const char *xml, const char *name) {
             mxml_node_t *xml_value;
             size_t data_size;
             unsigned int i;
-
+            int wsp = 0;
             data_size = 0;
-            xml_value = xml_data->child;
+            xml_value = mxmlGetFirstChild(xml_data);
             while (xml_value != NULL &&
-                   xml_value->type == MXML_TEXT &&
-                   xml_value->value.text.string != NULL) {
-                for (i = 0; xml_value->value.text.string[i] != '\0'; i++) {
-                    switch (xml_value->value.text.string[i]) {
+                   mxmlGetType(xml_value) == MXML_TEXT &&
+                   mxmlGetText(xml_value, &wsp) != NULL) {
+                for (i = 0; mxmlGetText(xml_value, &wsp)[i] != '\0'; i++) {
+                    switch (mxmlGetText(xml_value, &wsp)[i]) {
                         case '0': case '1': case '2': case '3': case '4':
                         case '5': case '6': case '7': case '8': case '9':
                         case 'a': case 'b': case 'c':
@@ -177,7 +177,7 @@ bool Symbol_ParseString(const char *xml, const char *name) {
                             goto next_symbol;
                     }
                 }
-                xml_value = xml_value->next;
+                xml_value = mxmlGetNextSibling(xml_value);
             }
 
             /* symbol must be in bytes, so two hex digits per byte! */
@@ -192,17 +192,17 @@ bool Symbol_ParseString(const char *xml, const char *name) {
                 goto next_symbol;
 
             data_size = 0;
-            xml_value = xml_data->child;
+            xml_value = mxmlGetFirstChild(xml_data);
             while (xml_value != NULL &&
-                   xml_value->type == MXML_TEXT &&
-                   xml_value->value.text.string != NULL) {
-                for (i = 0; xml_value->value.text.string[i] != '\0'; i++) {
-                    switch (xml_value->value.text.string[i]) {
+                   mxmlGetType(xml_value) == MXML_TEXT &&
+                   mxmlGetText(xml_value, &wsp) != NULL) {
+                for (i = 0; mxmlGetText(xml_value, &wsp)[i] != '\0'; i++) {
+                    switch (mxmlGetText(xml_value, &wsp)[i]) {
                         case '0': case '1': case '2': case '3': case '4':
                         case '5': case '6': case '7': case '8': case '9':
                             data[data_size / 2] =
                                 (data[data_size / 2] << 4) +
-                                (xml_value->value.text.string[i] - '0');
+                                (mxmlGetText(xml_value, &wsp)[i] - '0');
                             mask[data_size / 2] =
                                 (mask[data_size / 2] << 4) + 0xf;
                             data_size++;
@@ -211,7 +211,7 @@ bool Symbol_ParseString(const char *xml, const char *name) {
                         case 'd': case 'e': case 'f':
                             data[data_size / 2] =
                                 (data[data_size / 2] << 4) +
-                                (xml_value->value.text.string[i] - 'a' + 10);
+                                (mxmlGetText(xml_value, &wsp)[i] - 'a' + 10);
                             mask[data_size / 2] =
                                 (mask[data_size / 2] << 4) + 0xf;
                             data_size++;
@@ -220,7 +220,7 @@ bool Symbol_ParseString(const char *xml, const char *name) {
                         case 'D': case 'E': case 'F':
                             data[data_size / 2] =
                                 (data[data_size / 2] << 4) +
-                                (xml_value->value.text.string[i] - 'A' + 10);
+                                (mxmlGetText(xml_value, &wsp)[i] - 'A' + 10);
                             mask[data_size / 2] =
                                 (mask[data_size / 2] << 4) + 0xf;
                             data_size++;
@@ -239,7 +239,7 @@ bool Symbol_ParseString(const char *xml, const char *name) {
                             break;
                     }
                 }
-                xml_value = xml_value->next;
+                xml_value = mxmlGetNextSibling(xml_value);
             }
         } else {
             symbol->data = data = NULL;
